@@ -1,0 +1,45 @@
+.item {
+    background: white;
+    border: 1px solid lightgrey;
+    border-radius: 7px;
+    cursor: grab;
+    transition: all 0.3s ease 0s;
+    display: flex;
+    flex-direction: column;
+    padding-top: 20px;
+    margin-top: 10px;
+}
+
+.title {
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: black;
+}
+
+.desc {
+    font-size: 0.9rem;
+    color: grey;
+    margin-top: 10px;
+}
+
+.green_box {
+    background-color: rgba(0, 128, 0, .2) !important;
+    color: #005700 !important;
+    padding: 5px;
+    font-weight: bold;
+    border-radius: 7px;
+    font-size: 1rem;
+}
+
+.d {
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+.clickable {
+    cursor: pointer;
+}
+
+.clickable:hover {
+    background-color: #f5f5f5;
+}
