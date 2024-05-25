@@ -34,3 +34,27 @@ body {
 .tooltip-container:hover .tooltip-box {
     opacity: 1;
 }
+
+
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    box-shadow: inset 0 0 20px 10px rgb(255, 255, 255);
+    border: solid 3px transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    box-shadow: inset 0 0 20px 10px #00000043;
+    border: solid 3px transparent;
+}
+
+.ic_btn{
+    background: blue;
+    color: white;
+}
+
+.ic_btn:hover{
+    background: rgb(0, 0, 206);
+}

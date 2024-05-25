@@ -1,91 +1,214 @@
 import Line from "@/Components/common/Line"
 import Papper from "@/Components/common/Papper"
 import styles from "./page.module.css"
-import Tooltip from "@/Components/common/Tooltip"
 import CreateTaskPopup from "./popups/CreateTaskPopup"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { IconButton, LinearProgress, Tooltip } from "@mui/material"
+import { createTaskService, deleteTaskService, getAllTasksService, updateTaskService } from "@/api/services/tasks"
+import { toast } from "react-toastify"
+import AppBar from "./Components/AppBar"
+import TaskItem from "./Components/TaskItem"
 
 export default function Home() {
 
     const [openCreateTaskPopup, setOpenCreateTaskPopup] = useState(false)
-
+    const [processing, setProcessing] = useState(true)
+    const [editing, setEditing] = useState({ status: false, task: undefined })
     const [todoTasks, setTodoTasks] = useState([]);
     const [ongoingTasks, setOngoingTasks] = useState([]);
     const [completedTasks, setCompletedTasks] = useState([]);
 
+    const fetchInitialData = async () => {
+        console.log("fetching data");
+        getAllTasksService().then(res => {
+            const data = res.data;
+            setTodoTasks(data.filter(task => task.status === "todo"));
+            setOngoingTasks(data.filter(task => task.status === "ongoing"));
+            setCompletedTasks(data.filter(task => task.status === "completed"));
+        }).catch(err => {
+            console.log(err);
+            toast.error("Failed to fetch data");
+        }).finally(() => {
+            setProcessing(false);
+        });
+    }
+
+    const createTask = (data) => {
+        data.id = Math.random().toString(36).substring(7);
+        setTodoTasks([...todoTasks, data]);
+        setProcessing(true);
+        createTaskService({ task: data }).then(res => {
+            fetchInitialData();
+        }).catch(err => {
+            console.log(err);
+            toast.error("Failed to create task");
+            setTodoTasks(todoTasks.filter(task => task.id !== data.id));
+        }).finally(() => {
+            setProcessing(false);
+        });
+    }
+
+    const updateTask = (data) => {
+        setProcessing(true);
+        updateTaskService({ id: data.id, task: data }).then(res => {
+            fetchInitialData();
+        }).catch(err => {
+            console.log(err);
+            toast.error("Failed to update task");
+        }).finally(() => {
+            setProcessing(false);
+        });
+    }
+
+    const deleteTask = (id) => {
+        setProcessing(true);
+        setTodoTasks(todoTasks.filter(task => task.id !== id));
+        deleteTaskService({ id }).then(res => {
+            fetchInitialData();
+        }).catch(err => {
+            console.log(err);
+            toast.error("Failed to delete task");
+        }).finally(() => {
+            setProcessing(false);
+        });
+    }
+
+
     const onCreateTaskSubmit = (data) => {
-        console.log(data);
+        if (data.editing) {
+            updateTask(data.data);
+        } else {
+            createTask(data.data);
+        }
+        setOpenCreateTaskPopup(false);
+    }
+
+    useEffect(() => {
+        fetchInitialData()
+    }, [])
+
+    const handleOnDragOver = (e) => {
+        e.preventDefault();
+        let target = e.target;
+        while (target.className !== styles.task_container) target = target.parentElement;
+        if (target.style.background === "#f5f5f5") return;
+        target.style.transition = "0.1s";
+        target.style.background = "#f5f5f5"
+    }
+
+    const handleOnDragLeave = (e) => {
+        e.preventDefault();
+        let target = e.target;
+        while (target.className !== styles.task_container) target = target.parentElement
+        if (target.style.background === "#ffffff") return;
+        target.style.background = "#ffffff"
+        target.style.transition = "0";
+    }
+
+    const onDragDrop = (e) => {
+        e.preventDefault();
+
+        let target = e.target;
+        while (target.className !== styles.task_container) target = target.parentElement;
+        target.style.background = "#ffffff";
+        target.style.transition = "0";
+
+        const task = JSON.parse(e.dataTransfer.getData("task"));
+        task.status = target.id;
+        setProcessing(true);
+        updateTaskService({ id: task.id, task }).then(res => {
+            fetchInitialData();
+        }).catch(err => {
+            console.log(err);
+            toast.error("Failed to update task");
+        }).finally(() => {
+            setProcessing(false);
+        });
+
     }
 
     return <div style={{ width: "100%", height: "100vh", background: "#f2f2f2" }}>
 
+        {processing && <LinearProgress style={{ position: "fixed", top: 0, left: 0, width: "100%", zIndex: 1000 }} />}
+
         {/* APP BAR */}
-        <div style={{ padding: "10px" }}>
-            <Papper>
-                <span style={{ fontWeight: "bold", fontSize: "20px" }}>Todo</span>
-            </Papper>
-        </div>
+        <AppBar />
         {/* APP BAR */}
 
         {/* CONTENT */}
         <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <Papper style={{ width: "300px", marginLeft: "5px", marginRight: "5px" }}>
-                <span>TODO</span>
-                <Line />
-
-                <div>
-                    <div style={{ color: 'blue', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 10 }} className={`${styles.item} ${styles.clickable}`}>
-                        <span>New task</span>
+            <Papper id='todo' onDrop={onDragDrop} className={styles.task_container} onDragOver={handleOnDragOver} onDragLeave={handleOnDragLeave}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                        <span>TODO</span>
                     </div>
-                    <div className={styles.item}>
-                        <div className={styles.d}>
-                            <span className={styles.title}>TaskName</span>
-                        </div>
-                        <div className={styles.d}>
-                            <span className={styles.desc}>Enter description here</span>
-                        </div>
-                        <div className={styles.d}>
-                            <div style={{ marginTop: "20px", display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <Tooltip text={"Create you by today"}>
-                                    <div className={styles.green_box}>
-                                        Today
-                                    </div>
-                                </Tooltip>
-                            </div>
-                        </div>
-                        <Line margin={10} />
-                        <div style={{ display: 'flex', justifyContent: 'space-between', color: 'gray', marginBottom: '10px' }} className={styles.d}>
-                            <div style={{ display: 'flex', alignItems: 'center' }}>
-                                <span class="material-symbols-rounded">clock_loader_80</span>
-                                <span style={{ marginLeft: 5 }}>2 days left</span>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center' }}>
-                                <span class="material-symbols-rounded">event</span>
-                                <span style={{ marginLeft: 5 }}>May 24</span>
-                            </div>
-                        </div>
-                        <Line margin={0} />
-                        <div onClick={() => { setOpenCreateTaskPopup(true) }} style={{ padding: 10, display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'blue' }} className={`${styles.d} ${styles.clickable}`}>
-                            <span>Edit</span>
-                        </div>
-                        <Line margin={0} />
-                        <div style={{ padding: 10, display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'red' }} className={`${styles.d} ${styles.clickable}`}>
-                            <span>Delete</span>
-                        </div>
+                    <div>
+                        <Tooltip title="Create new task">
+                            <IconButton className="ic_btn" onClick={() => { setEditing({ status: false, task: undefined }); setOpenCreateTaskPopup(true) }}>
+                                <span class="material-symbols-rounded">add</span>
+                            </IconButton>
+                        </Tooltip>
                     </div>
                 </div>
-            </Papper>
-            <Papper style={{ width: "300px", marginLeft: "5px", marginRight: "5px" }}>
-                <span>Ongoing</span>
                 <Line />
+
+                <div style={{ maxHeight: "80vh", overflowY: 'auto' }}>
+                    {
+                        todoTasks.map((task) => {
+                            return <TaskItem task={task} key={task.id} setEditing={setEditing} setOpenCreateTaskPopup={setOpenCreateTaskPopup} deleteTask={deleteTask} />
+                        })
+                    }
+                </div>
             </Papper>
-            <Papper style={{ width: "300px", marginLeft: "5px", marginRight: "5px" }}>
-                <span>Completed</span>
+            <Papper id='ongoing' onDrop={onDragDrop} className={styles.task_container} onDragOver={handleOnDragOver} onDragLeave={handleOnDragLeave}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                        <span>Ongoing</span>
+                    </div>
+                    <div style={{ visibility: "hidden" }}>
+                        <Tooltip title="Create new task">
+                            <IconButton className="ic_btn" onClick={() => { setEditing({ status: false, task: undefined }); setOpenCreateTaskPopup(true) }}>
+                                <span class="material-symbols-rounded">add</span>
+                            </IconButton>
+                        </Tooltip>
+                    </div>
+                </div>
                 <Line />
+
+                <div style={{ maxHeight: "80vh", overflowY: 'auto' }}>
+                    {
+                        ongoingTasks.map((task) => {
+                            return <TaskItem task={task} key={task.id} setEditing={setEditing} setOpenCreateTaskPopup={setOpenCreateTaskPopup} deleteTask={deleteTask} />
+                        })
+                    }
+                </div>
+            </Papper>
+            <Papper id='completed' onDrop={onDragDrop} className={styles.task_container} onDragOver={handleOnDragOver} onDragLeave={handleOnDragLeave}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                        <span>Completed</span>
+                    </div>
+                    <div style={{ visibility: "hidden" }}>
+                        <Tooltip title="Create new task">
+                            <IconButton className="ic_btn" onClick={() => { setEditing({ status: false, task: undefined }); setOpenCreateTaskPopup(true) }}>
+                                <span class="material-symbols-rounded">add</span>
+                            </IconButton>
+                        </Tooltip>
+                    </div>
+                </div>
+                <Line />
+
+                <div style={{ maxHeight: "80vh", overflowY: 'auto' }}>
+                    {
+                        completedTasks.map((task) => {
+                            return <TaskItem task={task} key={task.id} setEditing={setEditing} setOpenCreateTaskPopup={setOpenCreateTaskPopup} deleteTask={deleteTask} />
+                        })
+                    }
+                </div>
             </Papper>
         </div>
         {/* CONTENT */}
-        <CreateTaskPopup open={openCreateTaskPopup} onClose={() => setOpenCreateTaskPopup(false)} onSubmit={onCreateTaskSubmit} />
+        <CreateTaskPopup editing={editing.status} defaultValue={editing.task} open={openCreateTaskPopup} onClose={() => { setEditing({ status: false, task: undefined }); setOpenCreateTaskPopup(false) }} onSubmit={onCreateTaskSubmit} />
 
     </div>
 }

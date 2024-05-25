@@ -43,3 +43,9 @@
 .clickable:hover {
     background-color: #f5f5f5;
 }
+
+.task_container {
+    margin-left: 10px;
+    margin-right: 10px;
+    width: 350px;
+}
