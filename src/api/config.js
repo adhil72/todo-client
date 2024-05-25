@@ -1,5 +1,5 @@
 import axios from "axios";
 
 export const api = axios.create({
-    baseURL: "http://localhost:5000/",
+    baseURL: "https://todo-server-r7u4.onrender.com",
 })
